@@ -81,6 +81,9 @@ func main() {
 	http.HandleFunc("/admin/vouchers", authMiddleware(adminVouchersHandler))
 	http.HandleFunc("/admin/change-password", authMiddleware(adminChangePasswordHandler))
 	http.HandleFunc("/admin/logout", adminLogoutHandler)
+	http.HandleFunc("/admin/stats/kpi", authMiddleware(adminDashboardStatsHandler))
+	http.HandleFunc("/admin/stats/voucher-status", authMiddleware(adminVoucherStatusHandler))
+	http.HandleFunc("/admin/stats/voucher-sales", authMiddleware(adminVoucherSalesHandler))
 
 	// Serve frontend files from the absolute path where install.sh places them
 	fs := http.FileServer(http.Dir("/www/voucher/"))
@@ -90,6 +93,35 @@ func main() {
 
 	}
 
+}
+func adminDashboardStatsHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	stats, err := getDashboardStats()
+	if err != nil {
+		http.Error(w, `{"error": "Internal server error"}`, http.StatusInternalServerError)
+		return
+	}
+	json.NewEncoder(w).Encode(stats)
+}
+
+func adminVoucherStatusHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	status, err := getVoucherStatus()
+	if err != nil {
+		http.Error(w, `{"error": "Internal server error"}`, http.StatusInternalServerError)
+		return
+	}
+	json.NewEncoder(w).Encode(status)
+}
+
+func adminVoucherSalesHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	sales, err := getVoucherSales()
+	if err != nil {
+		http.Error(w, `{"error": "Internal server error"}`, http.StatusInternalServerError)
+		return
+	}
+	json.NewEncoder(w).Encode(sales)
 }
 
 // validateVoucher checks if a voucher is valid and returns it along with an error message suitable for clients.

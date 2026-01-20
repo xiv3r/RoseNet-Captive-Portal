@@ -25,6 +25,7 @@ type Voucher struct {
 	Code       string    `json:"code"`
 	Name       string    `json:"name"`
 	Duration   int       `json:"duration"` // in minutes
+	Price      float64   `json:"price"`
 	Expiration time.Time `json:"expiration,omitempty"`
 	DataLimit  int       `json:"data_limit,omitempty"` // in MB
 	IsReusable bool      `json:"is_reusable"`
@@ -32,6 +33,22 @@ type Voucher struct {
 	StartTime  time.Time `json:"start_time,omitempty"`
 	UserIP     string    `json:"user_ip,omitempty"`
 	UserMAC    string    `json:"user_mac,omitempty"`
+}
+
+type DashboardStats struct {
+	TotalRevenue      float64 `json:"total_revenue"`
+	ActiveVouchers    int     `json:"active_vouchers"`
+	TotalDataConsumed float64 `json:"total_data_consumed"` // In GB
+	LiveOnlineUsers   int     `json:"live_online_users"`
+}
+type VoucherStatus struct {
+	Active  int `json:"active"`
+	Expired int `json:"expired"`
+	Unused  int `json:"unused"`
+}
+type VoucherSales struct {
+	Month string `json:"month"`
+	Sales int    `json:"sales"`
 }
 
 // loadData reads the voucher and settings JSON files into memory.
@@ -127,6 +144,7 @@ func getVoucherByCode(code string) (*Voucher, error) {
 
 func useVoucher(code, ip, mac string) error {
 	v, err := getVoucherByCode(code)
+.
 	if err != nil {
 		return err
 	}
@@ -190,4 +208,65 @@ func initializeAdminPassword(defaultPass string) error {
 	}
 	// Password already exists, no error.
 	return nil
+}
+func getDashboardStats() (*DashboardStats, error) {
+	totalRevenue := 0.0
+	activeVouchers := 0
+	now := time.Now()
+
+	for _, v := range vouchersCache {
+		if v.IsUsed {
+			totalRevenue += v.Price
+			if v.Duration > 0 {
+				expiry := v.StartTime.Add(time.Duration(v.Duration) * time.Minute)
+				if now.Before(expiry) {
+					activeVouchers++
+				}
+			}
+		}
+	}
+
+	// Mock data for TotalDataConsumed and LiveOnlineUsers
+	stats := &DashboardStats{
+		TotalRevenue:      totalRevenue,
+		ActiveVouchers:    activeVouchers,
+		TotalDataConsumed: 850, // Mock data in GB
+		LiveOnlineUsers:   120, // Mock data
+	}
+	return stats, nil
+}
+func getVoucherStatus() (*VoucherStatus, error) {
+	status := &VoucherStatus{}
+	now := time.Now()
+
+	for _, v := range vouchersCache {
+		if !v.IsUsed {
+			status.Unused++
+		} else {
+			if v.Duration > 0 {
+				expiry := v.StartTime.Add(time.Duration(v.Duration) * time.Minute)
+				if now.Before(expiry) {
+					status.Active++
+				} else {
+					status.Expired++
+				}
+			} else {
+				// If duration is 0, it's considered active indefinitely once used
+				status.Active++
+			}
+		}
+	}
+	return status, nil
+}
+func getVoucherSales() ([]VoucherSales, error) {
+	// Mock data for the last 6 months
+	sales := []VoucherSales{
+		{Month: "Jan", Sales: 150},
+		{Month: "Feb", Sales: 200},
+		{Month: "Mar", Sales: 180},
+		{Month: "Apr", Sales: 220},
+		{Month: "May", Sales: 250},
+		{Month: "Jun", Sales: 300},
+	}
+	return sales, nil
 }
